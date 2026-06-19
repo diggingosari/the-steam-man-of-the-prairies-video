@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Steam Man of the Prairies</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:#000;
+  width:100%;height:100%;
+  overflow:hidden;
+  font-family:'Courier New',Courier,monospace;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ── 4:3 CONTAINER — black bars on sides or top automatically ── */
+#container{
+  position:relative;
+  background:#000;
+  width:min(100vw, 133.333vh);
+  height:min(100vh, 75vw);
+  flex-shrink:0;
+  overflow:hidden;
+}
+
+/* ── SHARED ── */
+.scanline{pointer-events:none;position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px);z-index:10;}
+
+/* ── TITLE SCREEN ── */
+#title-screen{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:#000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:100;
+  transition:opacity 1s ease;
+}
+#title-screen.fade-out{opacity:0;pointer-events:none;}
+#title-scene{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;gap:0;}
+#title-art{color:#33ff33;font-size:clamp(4px,0.76vw,8.5px);line-height:1.15;white-space:pre;text-align:center;text-shadow:0 0 7px rgba(51,255,51,0.55);letter-spacing:0;flex-shrink:0;}
+.tgap{flex-shrink:0;height:clamp(5px,1.4vw,14px);}
+.tgap2{flex-shrink:0;height:clamp(7px,1.8vw,18px);}
+.tgap3{flex-shrink:0;height:clamp(12px,2.8vw,28px);}
+#title-subtitle{color:#1aaa1a;font-size:clamp(6px,0.9vw,10px);letter-spacing:4px;text-align:center;flex-shrink:0;text-shadow:0 0 4px rgba(51,255,51,0.3);}
+#desert-wrap{display:flex;justify-content:center;flex-shrink:0;}
+#desert{color:#33ff33;font-size:clamp(1.8px,0.42vw,4.8px);line-height:1.0;white-space:pre;text-align:left;opacity:0.9;letter-spacing:0;display:inline-block;}
+#title-prompt{color:#33ff33;font-size:clamp(7px,1.0vw,12px);letter-spacing:3px;animation:blink 1.2s step-end infinite;text-align:center;flex-shrink:0;}
+@keyframes blink{50%{opacity:0;}}
+#title-timer{position:absolute;bottom:12px;right:18px;font-size:10px;color:#0d4a0d;letter-spacing:2px;}
+
+/* ── GAME SCREEN ── */
+#game-screen{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:#000;
+  display:none;flex-direction:column;
+  opacity:0;
+  transition:opacity 0.8s ease;
+}
+#game-screen.visible{display:flex;opacity:1;}
+#topbar{background:#33ff33;color:#000;font-size:clamp(14px,1.8vw,22px);font-weight:bold;padding:5px 12px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;letter-spacing:0.5px;white-space:nowrap;gap:10px;}
+#statusbar{background:#000;padding:4px 12px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #0d3a0d;}
+#statuslabel{font-size:clamp(11px,1.3vw,16px);color:#33ff33;letter-spacing:1.5px;white-space:nowrap;}
+#gauges{font-size:clamp(11px,1.3vw,16px);color:#33ff33;letter-spacing:1px;white-space:nowrap;opacity:0.75;}
+#middle{flex:1;overflow-y:auto;padding:clamp(8px,1.5vw,16px) clamp(10px,2vw,20px) 10px;scrollbar-width:thin;scrollbar-color:#1a4a1a #000;}
+#middle::-webkit-scrollbar{width:4px;}
+#middle::-webkit-scrollbar-track{background:#000;}
+#middle::-webkit-scrollbar-thumb{background:#1a4a1a;}
+#out{font-size:clamp(16px,2vw,24px);line-height:1.85;color:#33ff33;white-space:pre-wrap;word-break:break-word;text-align:left;}
+.choice-block{margin-top:10px;}
+.choice-lbl{font-size:clamp(11px,1.3vw,16px);color:#1a9a1a;letter-spacing:2px;margin-bottom:5px;}
+.opt{display:block;font-size:clamp(14px,1.8vw,22px);color:#33ff33;padding:3px 8px;border:1px solid #1a5a1a;border-radius:2px;cursor:pointer;background:transparent;text-align:left;margin-bottom:4px;width:100%;}
+.opt:hover{border-color:#33ff33;background:#001400;}
+.opt.selected{color:#000;background:#33ff33;border-color:#33ff33;}
+.opt.locked{color:#0a2a0a;border-color:#091509;pointer-events:none;cursor:default;}
+#botbar{background:#33ff33;color:#000;font-size:clamp(14px,1.8vw,22px);font-weight:bold;padding:5px 12px;display:flex;align-items:center;flex-shrink:0;letter-spacing:0.5px;gap:5px;}
+#cursor{display:inline-block;width:clamp(11px,1.4vw,18px);height:clamp(15px,1.8vw,22px);background:#000;animation:blink 1s step-end infinite;vertical-align:middle;flex-shrink:0;}
+#ctrlrow{background:#000;display:flex;gap:8px;padding:4px 10px;flex-shrink:0;flex-wrap:wrap;border-top:1px solid #0a220a;}
+.cb{background:transparent;border:1px solid #1a4a1a;color:#1a8a1a;font-family:'Courier New',monospace;font-size:clamp(7px,0.8vw,10px);padding:2px 8px;letter-spacing:1px;cursor:pointer;border-radius:2px;}
+.cb:hover{border-color:#33ff33;color:#33ff33;}
+</style>
+</head>
+<body>
+<div id="container">
+
+<!-- TITLE SCREEN -->
+<div id="title-screen">
+  <div class="scanline"></div>
+  <div id="title-scene">
+    <div id="title-art"></div>
+    <div class="tgap"></div>
+    <div id="title-subtitle">A DIME NOVEL ADVENTURE  //  1868</div>
+    <div class="tgap2"></div>
+    <div id="desert-wrap"><div id="desert"></div></div>
+    <div class="tgap3"></div>
+    <div id="title-prompt">[ PRESS ANY KEY TO BEGIN ]</div>
+  </div>
+  <div id="title-timer"></div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div class="scanline"></div>
+  <div id="topbar">
+    <span id="topbar-left">THE STEAM MAN OF THE PRAIRIES</span>
+    <span id="topbar-right">PROLOGUE</span>
+  </div>
+  <div id="statusbar">
+    <span id="statuslabel"></span>
+    <span id="gauges"></span>
+  </div>
+  <div id="middle"><div id="out"></div></div>
+  <div id="botbar">What's next?&nbsp;<span id="cursor"></span></div>
+  <div id="ctrlrow">
+    <button class="cb" id="bPause">[ PAUSE ]</button>
+    <button class="cb" id="bAuto">[ AUTO: ON ]</button>
+    <button class="cb" id="bSkip">[ SKIP STAGE ]</button>
+    <button class="cb" id="bRestart">[ RESTART ]</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// TITLE SCREEN
+// ═══════════════════════════════════════════
+const TITLE_TEXT =
+` _____ _   _ _____   ____ _____ _____    _    __  __   __  __    _    _   _
+|_   _| | | | ____| / ___|_   _| ____|  / \\  |  \\/  | |  \\/  |  / \\  | \\ | |
+  | | | |_| |  _|   \\___ \\ | | |  _|   / _ \\ | |\\/| | | |\\/| | / _ \\ |  \\| |
+  | | |  _  | |___   ___) || | | |___ / ___ \\| |  | | | |  | |/ ___ \\| |\\  |
+  |_| |_| |_|_____| |____/ |_| |_____/_/   \\_\\_|  |_| |_|  |_/_/   \\_\\_| \\_|
+
+  ___  _____   _____ _   _ _____   ____  ____      _    ___ ____  ___ _____ ____
+ / _ \\|  ___| |_   _| | | | ____| |  _ \\|  _ \\    / \\  |_ _|  _ \\|_ _| ____/ ___|
+| | | | |_      | | | |_| |  _|   | |_) | |_) |  / _ \\  | || |_) || ||  _| \\___ \\
+| |_| |  _|     | | |  _  | |___  |  __/|  _ <  / ___ \\ | ||  _ < | || |___ ___) |
+ \\___/|_|       |_| |_| |_|_____| |_|   |_| \\_\\/_/   \\_\\___|_| \\_\\___|_____|____/`;
+
+const ART = [
+"","","","",
+"       .*#:",
+"      %@@@@@",
+"     :@@@@@@@",
+"     #@@@@@@@:",
+"@@   @@@@@@@@#",
+"@@*  @@@@@@@@@",
+"@@#  @@@@@@@@@",
+"@@#  %@@@@@@@@",
+"@@#  %@@@@@@@@",
+"@@*  %@@@@@@@@",
+"@@*  %@@@@@@@@=+**-                                                  .:-------==:.",
+"@@*  @@@@@@@@@=+@@@@                                            .=-:....      ....:-==.",
+"@@=  @@@@@@@@@-*@@@@:%.                                      .-..                    ..:=:",
+"@@=  @@@@@@@@%-#@@@@#*:                                   .:..                          ..-=.",
+"@@=  @@@@@@@@%-*@@@@#++                                 .:.                                .--.",
+"@@=  @@@@@@@@%-*@@@@*=+#-                              :.           ..:::....:::::          ..--",
+"@@=  @@@@@@@@#=*@@@@*-=*=                            .:.         .:.....       ....:-.        .:=.",
+"@@- .@@@@@@@@*-+@@@@+-=*=                           .:.        ....      .....      ..-.       ..-.                                    *++#=",
+"@@# .@@@@@@@@*=+@@@@===*=                          ...       ....   .           ...   ..-.       .=.                                  .+==+**",
+"@@@@*@@@@@@@@*-+@@@@===*+                         .:.       ...                    ..  ..-.      .:-        .:--.                     :=====+%",
+"+@@@@@@@@@@@@+-+@@@@-==+*#                        ..       ...                       .   .-:      .-:     .@@@@@@*    .%@@           -+======*",
+" .#@@@@@@@@@@+-+@@@@-===+#-             +*#%      ..      ...                         .   .-.     ..=    .#@@@@@@@.  #@@@@+         =+=+-====*",
+"     @@@@@@@@==+@@@@-===+#=             =++#:    ..      ...  .                        .  ..:      .=.   .@@@@@@@@.  @@@@@*        .+=+@=-===*",
+"     @@@@@@@@==+@@@@-=--=*+             -++*-    ..      ...                           .  ..:.     .-.   .@@@@@@@@.  @@@@@+        .+=+@=====#",
+"     %@@@@@@@+@@@@@*---=+*+          #  *==+*    ..      ...                           .  ..:.     .-.   .@@@@@@@@:  #@@@@#%%.     :*=+@=====#",
+"    .%@@@@@@@@@@@@@---===+#         .#- +==*%    ..      ...       -%                  .  ..:      .--.  .@@@@@@@@-  +@@@@-*#-  ****@#+@-====*",
+"    :%@@@@@@@@@@@@*-=====+*+        =%= *==+%    ..       ..  .    +%                  .  ..:      .%@@% -@@@@@@@@=  =@@@@+++#:-+==+@#+@-=-==*",
+" .  =#@@@@@@@@@@@#=-======+#-      .=## +==+#+    ..      ...     =*#=                .  ..-.     .+@@@- +@@@@@@@@*  -@@@@===**+===+@#+@=@%-=*",
+" *+++*@@@@@@@@@@@*@@-======++*#=   .++#++===*%    ..       ...  .++=+%               .   .-.      :@@@@#*#@@@@@@@@%  .@@@@=====+*=-+@#+@=@%-=*",
+"+**==*@@@@@@@@@@@+@@-=====----=++**+=========*#%:  :.       ... .*==+#             .   ..-       .=@@@@==*@@@@@@@@@*++@@@@**+==-=@+#@#*@+@@=+*",
+"+#%==*@@@@@@@@@@@*@@+++++=======+++***+=-======+*##*-..      ...=+==+#:          .   ....       .:*@@@@-=*@@@@@@@@@@@@@@@=---::-=@=+@+=@-@%:-+",
+"%-*=-#@@@@@@@@@@@%@@:--=%-:::::::-----=+*+=+=-=====+++*##=. .--++====+*#=..        .....       .:-.@@@@-=*@@@@@@@@@@@@@@=:::--:-=@=+@+=@-@%:-+",
+"%@%%*@@@@@@@#%@@@+@%::-*@#:::::---::-----+#@@++==-=======+**++====----===+**=:.......        .--: .%@@@=+#@@@@@@@@#==----::-=#=:=@=+@+=@-@#:-+",
+"@@%%+@@@@@@@*%@@@@@%**+*@#::::---::-::-:-=+%%#==+**+=--=====++++++====+++***+++**=:-==++=++++***+++%@@@--+@@@@@@@@+:::---:--=@+:=@-+@@@@+@@**#",
+"%%@@*@%@@@@@@*@@@*#++%@@@@#@::::::::--::--=%#*-:---=+++*++==----::::-+@:=@@+=+++++*******+++*%####%@@@@@@@@@@@@@@@=:-::-::--=@+.-@@@@@@@*@@+*%",
+"#@%@@@@@@@@@@#@@@%*++@@#@%*@#*##%%%#+-:::::*%-:----:--:--::---::::::-*@:+@@#-@:::::------+###%*%=+++%@@@@@@@@@@@@@=:--=+++*@@@%@##%@@@@@@@#++#",
+"@@@@@@@@@@@@@@@@@#*=+@@#@%*@*=++++++###%=:=%%=::::::::---===------::-+@-*@@+=@=:----=*##*++%+#+%=+++++==*#@@@@@@@@#**+**++*@#@#@*+++@@@@+++*%@",
+"@@@@@@@@@@@@@@@@@@**#@@@@@@@#%%%*++*%%###%##%%%#**+=**#*******######**%@@@@@@@**##**+++++++%*%*#=+++===++*%@@@@@@@@####==++@#@@@++++@@@**##**%",
+"@@@@@@@@@@@@@@@@@@@@%#@@@***+***####*+*************#%%#*==++++++++++++++%@@@@+=+**+=+++++++*#@@#=+++#%#%##@@@@@@@@#*#@@%%#+@@@*++**@@@@##*+++#",
+"@@@@@@@@@@@@@@@@@@@@+*%@@@@%+++***+**+*++**************#%%%*==+++++==+++@@%===+#@%*+==+%@@@@@@@%#+*###@++*%@@@@@@@%*%@*%%#%%@@@##%@@@@@@#+=+*@",
+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@++**##*+++**+********+++***#%%%%#%@%+=+#%@%==++@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%@@@@*%@@@@@@@@@@@@@@@@@@@@",
+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%+++******+++++++************#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+];
+
+document.getElementById('title-art').textContent = TITLE_TEXT;
+document.getElementById('desert').textContent = ART.join('\n');
+
+let titleDone = false;
+let countdown = 5;
+const timerEl = document.getElementById('title-timer');
+
+function launchGame() {
+  if (titleDone) return;
+  titleDone = true;
+  clearInterval(countdownInterval);
+  const ts = document.getElementById('title-screen');
+  ts.classList.add('fade-out');
+  const gs = document.getElementById('game-screen');
+  gs.style.display = 'flex';
+  setTimeout(() => { gs.classList.add('visible'); }, 50);
+  setTimeout(() => { ts.style.display = 'none'; runSeq(); }, 1000);
+}
+
+function updateTimer() {
+  countdown--;
+  if (countdown <= 0) { launchGame(); return; }
+  timerEl.textContent = countdown + 's';
+}
+timerEl.textContent = countdown + 's';
+const countdownInterval = setInterval(updateTimer, 1000);
+
+document.addEventListener('keydown', launchGame);
+document.getElementById('title-screen').addEventListener('click', launchGame);
+
+// ═══════════════════════════════════════════
+// GAME ENGINE
+// ═══════════════════════════════════════════
+const OUT = document.getElementById('out');
+const MID = document.getElementById('middle');
+const SLBL = document.getElementById('statuslabel');
+const GAUGEDIV = document.getElementById('gauges');
+const TRIGHT = document.getElementById('topbar-right');
+
+let paused=false,autoMode=true,skipFlag=false,typing=false;
+let si=0,seqi=0,cmdi=0,tyT=null,stT=null,tbuf='',tpos=0;
+let gaugeT=null;
+let gCur={water:0,fuel:0,pressure:0};
+let gTarget={water:0,fuel:0,pressure:0};
+
+function lerpGauge(){
+  clearTimeout(gaugeT);
+  let changed=false;
+  ['water','fuel','pressure'].forEach(k=>{
+    if(gCur[k]!==gTarget[k]){
+      const diff=gTarget[k]-gCur[k];
+      const step=diff>0?Math.ceil(diff/8):Math.floor(diff/8);
+      gCur[k]+=step;
+      if(Math.abs(gTarget[k]-gCur[k])<1)gCur[k]=gTarget[k];
+      changed=true;
+    }
+  });
+  renderGauge();
+  if(changed)gaugeT=setTimeout(lerpGauge,60);
+}
+function renderGauge(){
+  if(gTarget.water===0&&gTarget.fuel===0&&gTarget.pressure===0){GAUGEDIV.textContent='';return;}
+  GAUGEDIV.textContent='WATER: '+gCur.water+'%  |  FUEL: '+gCur.fuel+'%  |  PRESSURE: '+gCur.pressure+' lbs';
+}
+function setGaugeTarget(g){
+  if(!g){gTarget={water:0,fuel:0,pressure:0};gCur={water:0,fuel:0,pressure:0};GAUGEDIV.textContent='';return;}
+  gTarget={water:g.water,fuel:g.fuel,pressure:g.pressure};
+  lerpGauge();
+}
+function animateGaugeTo(g,delay){
+  clearTimeout(gaugeT);
+  setTimeout(()=>{gTarget={water:g.water,fuel:g.fuel,pressure:g.pressure};lerpGauge();},delay||0);
+}
+
+const STAGES=[
+{label:'PROLOGUE',status:'',gauge:null,seqs:[
+  {type:'narrate',text:`"YOU HAVE THE POWER, AND THE WORLD DOES NOT SATISFY YOU."`},
+  {type:'narrate',text:`> WOULD YOU LIKE TO CHANGE THE WORLD?\n> WOULD YOU LIKE TO CHANGE YOURSELF?`},
+  {type:'narrate',text:`                    .  .  .\n\nYour name is Johnny Brainerd.\nYou are fifteen years of age,\nliving with your widowed mother on the outskirts of St. Louis.\n\nYour father, a noted mechanic,\nwas killed by a steam boiler explosion five years ago.\n\nYou were left hump-backed and dwarfed.\n\nBut if nature afflicts in one direction,\nshe frequently makes amends in another.\n\nYour mechanical ingenuity borders on the marvelous.`},
+]},
+{label:'STAGE 1 / 7',status:'-- ST. LOUIS WORKSHOP --',gauge:{water:100,fuel:80,pressure:0},seqs:[
+  {type:'room',text:`ST. LOUIS WORKSHOP\n\nA cramped workshop of tools and scrap iron.\nYour mother sits near the window, sewing in the afternoon light.\nYou lie beside her and sigh.\n\nYou see: canvas, wrench, bucket\nExits: yard (west)`},
+  {type:'parser',label:'-- EXAMINE --',cmds:[
+    {cmd:'> talk mother',resp:`She looks up from her sewing.\n\n"What is the matter?"\n\n"I want to make something."\n\n"Then why don't you?"\n\n"Because I don't know what it shall be;\nI've fixed up everything I can think of."\n\n"And you are like Alexander, sighing for more worlds to conquer?"\n\n"How can I conquer the world when I'm trapped in this body?\nI can't even leave this town without the help of others."\n\nShe studies you.\n\n"Each of us has our own burden," she replies.\n"Only those with burning hearts can do nothing but leave,\nstorm out like a train."\n\nA pause.\n\nThen\n\n"By George! I'll do it!"\n\nIf Johnny cannot walk the world,\nthe world must be brought under his command.\n\nA man that shall go by steam.`},
+  ]},
+  {type:'parser',label:'-- START BUILDING --',gauge:{water:100,fuel:75,pressure:5},cmds:[
+    {cmd:'> grab wrench',resp:`Days pass. Nights blur.\nIron answers to your will.\nBolts, rods, and pistons come together.\n\nAt last, there stands before you a being 10 feet in height.\nA whistle-like contrivance answers for the nose.\nThe steam chest and boiler rest where the human chest would be.\n\nNot a man, yet shaped as one.\nNot alive, yet breathing steam.\n\nIt is upon such a creation that Baldy Bicknell,\nan experienced hunter passing by the workshop,\nfirst lays his astonished gaze.\n\n"HELLO, younker! what in thunder yer tryin' to make?"\n\nHe circles it, half in wonder, half in disbelief.\nThe valves hiss. The machine moves.\nBaldy recoils\n\n"Skulp me ag'in! It's jest the thing for the West!"`},
+  ]},
+  {type:'choice',label:'-- CROSSROADS --',
+    prompt:'Now the choice stands before you:\nDo you remain here\nor step into the world you have built?',
+    opts:['> STAY: SELL MACHINE — Part with your creation for a handsome sum.  [LOCKED]','> GO WEST: JOIN EXPEDITION — Follow your creation into the world.  [CHOSEN]'],
+    locked:[0],chosen:1,
+    resp:`You will not sell.\nYou will follow it.\n\n> LEARN CONTROLS: Steam valve tested. Steering straps rigged.\n> INVENTORY: Steam Man (disassembled), Bucket, Wrench, Wood Boards.\n> TRAVEL: Head west to the Western Trail.`},
+  {type:'parser',label:'-- DEPART --',gauge:{water:100,fuel:70,pressure:10},cmds:[
+    {cmd:'> board wagon',resp:`You climb into the wagon seat behind the Steam Man's guiding straps.\n\nThe machine looms ahead of you.\nOne pull, and the world may widen.`},
+    {cmd:'> go west',resp:`You pull the valve.\n\nWith a violent hiss, the Steam Man lurches into motion.\n\nThe workshop falls behind.\nThe prairie begins.`},
+  ]},
+]},
+{label:'STAGE 2 / 7',status:'-- THE WESTERN TRAIL --',gauge:{water:100,fuel:60,pressure:20},seqs:[
+  {type:'room',text:`THE WESTERN TRAIL\n\nOpen prairie stretches in every direction.\nThe Steam Man, fully assembled, strides ahead,\nblack smoke puffing from its stovepipe hat.\nBaldy rides the wagon seat beside you, jaw tight with nervous wonder.\n\nYou see: wagon, steering straps, valve rod\nNearby: Baldy, Mickey, Ethan\nExits: west`},
+  {type:'narrate',text:`Mickey McSquizzle, an Irish miner, recoils as if before a demon:\n\n"Howly vargin! what is that?... It's the divil, broke loose, wid full steam on!"\n\nEthan Hopkins, also a miner, in Yankee astonishment, can only exclaim:\n\n"By the Jumping Jehosiphat, naow if that don't beat all natur'!"\n\nYet fear soon gives way to curiosity. They climb aboard the wagon,\nstill muttering, still uncertain.\n\n"Let her go, younker," Baldy urges. "Show us what she can do."`},
+  {type:'parser',label:'-- TUTORIAL: CONTROLS --',cmds:[
+    {cmd:'> use valve',gauge:{water:100,fuel:55,pressure:30},resp:`You give the valve rod a slight pull.\n\nAway you go and the prairie does not stretch,\nit collapses beneath you.\nThe wheels spin at a tremendous rate.\nThe wind lifts the caps from their heads.\n\n> SPEED: 30 mph\n> FUEL: burning steady`},
+    {cmd:'> slow down',gauge:{water:100,fuel:52,pressure:15},resp:`You ease the rod back. The machine slackens.\n\nThen without thinking you shut off the steam entirely.\nThe giant comes to such a sudden halt that everything throws forward.\n\n"Skulp me! but don't stop quite so sudden like!" Baldy growls.\n\n"I'll soon learn to manage it," you reply.`},
+    {cmd:'> check gauges',gauge:{water:100,fuel:50,pressure:20},resp:`> WATER LEVEL: OPTIMAL\n> FUEL: LOW — throwing in wood now.\n\nYou descend and stoke the furnace. The machine breathes easier.\n\nThe machine has spoken in its own language:\nPower is nothing without control.\n\nYou remount and steer west.\nThe Steam Man strides forward, grass bending under iron feet.`},
+  ]},
+  {type:'choice',label:'-- QUEST LOG UPDATED --',
+    prompt:'Travel to Wolf Ravine to locate the hidden gold mine.',
+    opts:['> CONTINUE WEST to Wolf Ravine  [CHOSEN]'],
+    locked:[],chosen:0,
+    resp:`The party moves on.\nThe prairie rolls beneath you, wide and indifferent.`},
+]},
+{label:'STAGE 3 / 7',status:'-- THE OPEN PLAINS --',gauge:{water:90,fuel:50,pressure:30},seqs:[
+  {type:'room',text:`THE OPEN PLAINS\n\nFlat land in every direction. The sky presses down, vast and pale.\nThe Steam Man cuts across the grass like a meteor.\nSomething moves on the horizon.\n\nYou see: prairie, horizon, wagon\nExits: west`},
+  {type:'narrate',text:`Then you see them.\n\nThree buffaloes.\nWatching. Waiting.\nA challenge, perhaps. Or a test.\n\nYou raise the rifle\n"If you want a chase, you may have it!"\nheading toward them.`},
+  {type:'parser',label:'-- ENCOUNTER --',cmds:[
+    {cmd:'> load rifle',resp:`You slide a cartridge into the chamber.\nThe rifle is ready.`},
+    {cmd:'> shoot buffalo',gauge:{water:88,fuel:45,pressure:40},resp:`The shot cracks across the open plain.\nOne buffalo stumbles, but does not fall.\n\nYou were not aware of this sturdy trait in the animal.\nNor did you dream of resistance.\n\nOne bull turns, not in flight, but in fury.\nWith a thunder of hooves, he charges.\n\nHis immense head strikes the rear of the wagon with such momentum\nthat it is lifted fully a foot from the ground.\n\nThe tables are turned with a vengeance.\nYou are now the pursued.`},
+  ]},
+  {type:'choice',label:'-- ESCAPE TACTICS --',
+    prompt:'The enraged animal plunges furiously behind you.\nHead lowered. Tongue out.\nSteam shrieks.\nYour hands tighten on the controls.',
+    opts:['> STOKE BOILER — Feed wood, build pressure, outrun the beast.','> BLOW WHISTLE — Pull the left cord and terrify him with a screech.  [CHOSEN]'],
+    locked:[],chosen:1,gauge:{water:85,fuel:42,pressure:35},
+    resp:`You yank the cord.\n\nThe Steam Man's whistle erupts, a banshee shriek across the plain.\n\nThe buffalo checks. Stumbles. Veers hard.\n\n"That'll do it," Baldy breathes.\n\n> STEER: Accelerate west. The beast fades in a cloud of dust.\n> FUEL: Holding steady.\n\nThe plains open wide again. The crisis passes.`},
+]},
+{label:'STAGE 4 / 7',status:'-- WOLF RAVINE --',gauge:{water:85,fuel:70,pressure:25},seqs:[
+  {type:'room',text:`WOLF RAVINE\n\nTurning your face more toward the mountains,\nan hour brings you to Wolf Ravine.\nThe edge and interior are lined with immense boulders and stunted trees.\n\nRock walls sink sharply around a cold river and glittering gravel.\nThe Steam Man vents a low breath beside the wagon.\n\nYou see: shovel, gravel, river, wagon, mountains (west)\nNearby: Baldy, Mickey, Ethan\nExits: west (mountains), south`},
+  {type:'narrate',text:`"Yar's what I call Wolf Ravine," says Baldy.\n\n"And be the same towken, where is the goold?" Mickey inquires.\n\n"It's in thar," Baldy replies, pointing to the wildest-looking portion.\n\nThe men work unceasingly, digging and washing the auriferous sand.\nAs you have no intention of manual labor, you propose a visit to the mountain.\n\n"No need of goin' so fur for game," Baldy replies.\n"Too dangerous. But ef you're keerful, younker,\nremember my advice. Stick to yer wagon."\n\n"Come in before dark," adds Mickey.\n\nYou promise to heed their warnings.`},
+  {type:'parser',label:'-- SOLO EXCURSION --',cmds:[
+    {cmd:'> go west',gauge:{water:80,fuel:65,pressure:25},resp:`You oil the machine, fill the tank, wave farewell,\nand steam toward the mountains.\n\nThe ravine narrows. The trees thicken.\nYou venture further than wisdom permits.`},
+    {cmd:'> look bear',resp:`A low, fierce growl stops you cold.\n\nYou turn.\n\nThere, in the shadow of rock and timber, he stands.\nA grizzly. Vast, immovable.\nSovereign of this desolate realm.\n\nNo machine stands between you now.\nNo iron limbs to bear your weight.\nOnly yourself, and the fragile cunning of a human body.`},
+    {cmd:'> load rifle',resp:`Your hands do not shake.\nYou load with slow, deliberate care.`},
+    {cmd:'> shoot bear',gauge:{water:80,fuel:65,pressure:10},resp:`The shot cracks through the timber.\n\nThe bear is hit, but coming.\n\nHe makes straight for you, shaking the ground.`},
+  ]},
+  {type:'choice',label:'-- EVASION --',
+    prompt:'The wounded bear charges.\nNo room to reload. No time to run.',
+    opts:['> FLEE SOUTH — Abandon the machine and run.  [DANGEROUS]','> CLIMB TREE — Scramble into branches above the beast.  [CHOSEN]'],
+    locked:[],chosen:1,
+    resp:`You scramble upward.\n\nThe beast rages below, shaking the trunk like a reed,\nhis claws raking bark from the wood.\n\nYou reload above him, hands steadied by the branch.\n\n> AIM AT RIGHT EYE\n\nThe front sight settles over the beast's skull.\n\n> SHOOT\n\nThe bullet speeds true, crashing into the skull of the colossal brute.\nWith a howling grunt,\nhe drops dead.\n\nIn that moment, you understand:\nThe Steam Man can extend you.\nBut it cannot replace you.\n\nYou stand victorious.\nBut not unchanged.\n\n> go east — Return to camp.`},
+]},
+{label:'STAGE 5 / 7',status:'-- THE RIVER BANK --',gauge:{water:20,fuel:65,pressure:20},seqs:[
+  {type:'room',text:`THE RIVER BANK\n\nOn your return to the Steam Man,\na wide river catches the afternoon sun.\nThe Steam Man stands beside you, its tank dangerously low.\nThe water runs cold and clear over smooth stones.\n\nYou see: river, Steam Man, water vessel\nExits: north (camp), east\n\n> WATER GAUGE: CRITICAL`},
+  {type:'choice',label:'-- DECISION --',
+    prompt:'The tank is nearly dry. Camp is still some distance north.',
+    opts:[">> RETURN TO CAMP — Risk running dry on the trail.  [LOCKED]",">> STOP AT RIVER — Fill the Steam Man's water tank.  [CHOSEN]"],
+    locked:[0],chosen:1,gauge:{water:100,fuel:63,pressure:18},
+    resp:`> WATER GAUGE: FILLING... 25%... 50%... 75%... 100%\n\nYou kneel at the river, refilling the tank with cold water.\n\nThe machine breathes easier.`},
+  {type:'narrate',text:`But there, in the stillness, danger waits in human form.\n\nDuff McIntosh.\n\nThe huge trapper.\nTerrible for his mind more than his stature.\nMorose, sullen, treacherous, envious, and reckless of danger.\nEven Baldy spoke of him with unease.\n\nThey have history, unfinished, bitter, and edged with violence.`},
+  {type:'parser',label:'-- ENCOUNTER: DUFF McINTOSH --',cmds:[
+    {cmd:'> talk duff',resp:`"Hullo, boss, thar, what yer doin'?"\n\nBefore you can answer, the giant hunter is beside you.\n\n"B'ars and bufflers! younker, what ye got thar?"\nHe eyes the Steam Man with vindictive wonder.\n"Can that ere thing walk?"\n\n"Yes, sir," you reply carefully. "And run, too."\n\n"Yer can't fool this yar boss in that style."\n\nHe steps closer, blocking your path.\n\n"Who mought yer be? What yer doin' hyar?\nDo yer come alone?"\n\n"No. I came with a hunter. Baldy Bicknell."\n\n"B'ars and bufflers! Whar mought he be?"\n\nYou hesitate. You must keep the gold a secret.\n\n"Baldy is some distance away. In camp."`},
+    {cmd:'> go north',gauge:{water:98,fuel:58,pressure:28},resp:`He circles you. Studies the Steam Man.\n\n"That thing walk?"\n"Yes."\n"Don't believe it."\n\n"Guess I'll go with yer.\nBut see hyar, younker, let's see yer try that old humbug of yourn.\nI'm goin' to take it myself,\nstart now, and let us see what yer can do."\n\nGlad of the opportunity, you spring into the wagon.\nYou let on steam.\nThe Steam Man starts off on a moderate gait, rapidly increasing to a swift one.\n\nDuff's voice fades behind you,\nhis figure swallowed by the gloom.\n\n"Guess I'll track yer," he growls to the empty air.`},
+  ]},
+  {type:'narrate',text:`You leave the wonder-stricken, vindictive hunter behind.\n\nBut the frontier remembers.\nAnd Duff McIntosh does not forget.`},
+]},
+{label:'STAGE 6 / 7',status:'-- WOLF RAVINE: MINING CAMP --',gauge:{water:100,fuel:40,pressure:15},seqs:[
+  {type:'room',text:`WOLF RAVINE — MINING CAMP\n\nBack at camp, you tell Baldy of the encounter.\nHe fears Duff McIntosh more than wolves.\n\nTwo weeks have passed.\nThe ravine walls are scraped pale. The river runs lower.\nGold glints in the wooden pans.\n\nYou see: gravel, pans, wagon, gold sand\nNearby: Baldy, Mickey, Ethan\nExits: north`},
+  {type:'parser',label:'-- MINING --',cmds:[
+    {cmd:'> wash gravel',gauge:{water:98,fuel:38,pressure:14},resp:`You work the pan in slow circles.\nGold sand catches the light at the bottom.\n\n[PAN 1 of 3 complete]`},
+    {cmd:'> wash gravel',gauge:{water:95,fuel:36,pressure:13},resp:`The gravel yields more flecks.\nMickey sings something unintelligible nearby.\n\n[PAN 2 of 3 complete]`},
+    {cmd:'> wash gravel',gauge:{water:92,fuel:34,pressure:12},resp:`Ethan peers over your shoulder.\n\n"By Jumping Jehosiphat, there's a real pile there!"\n\n[PAN 3 of 3 complete]`},
+    {cmd:'> collect gold',gauge:{water:90,fuel:30,pressure:10},resp:`You scrape the yield into the sack.\n\n[MAX YIELD REACHED]\n\nThe ravine is finally exhausted of its precious stuff.\nThere is enough wealth to buy each of them a handsome farm.\nMickey and Ethan bicker joyfully over their sweethearts back home\nuntil Baldy threatens to hammer them both.\n\n> WARNING: Heavy gold reduces maximum speed.\n> LOAD WAGON: Gold loaded. Wood supply critically low.\n> FUEL: Barely enough for twelve hours.`},
+  ]},
+  {type:'narrate',text:`Carrying gold, enough to tempt fate, enough to invite ruin,\nand fearing Duff's pursuit, you turn northward,\nabandoning the known paths.`},
+  {type:'choice',label:'-- ROUTE CHOICE --',
+    prompt:`Late one afternoon, you unconsciously enter a small, narrow valley.\nThe bottom level as a floor, the sides rise eight or ten feet.\n\n"It runs in the right direction," you observe.\n"Hyar's as afeared it ain't goin' to keep on in that style," remarks Baldy.\n\nThen the valley terminates. A dead end.\n\n"Well, here we are. What is to be done?"\n"Did yer ever try to make the thing go up hill?"\nYou shake your head. "Impossible. He would fall over on us."`,
+    opts:['> PRESS ON — Try to climb the Steam Man out.  [LOCKED / IMPOSSIBLE]','> MAKE CAMP — Rest here for the night.  [CHOSEN]'],
+    locked:[0],chosen:1,gauge:{water:88,fuel:28,pressure:8},
+    resp:`Baldy surveys the horizon. Nothing suspicious.\n\nYou make camp beneath the pale watch of the moon,\nbelieving distance has granted you safety.\n\nBut the frontier remembers.\n\n> NIGHT WATCH: Johnny volunteers.\nYou ask permission to take the night watch.\nThe weary trapper agrees.`},
+]},
+{label:'STAGE 7 / 7',status:'-- THE NARROW VALLEY --',gauge:{water:100,fuel:35,pressure:0},seqs:[
+  {type:'room',text:`THE NARROW VALLEY — NIGHT\n\nA small fire. Motionless forms.\nThe grim Steam Man stands vigil at the valley's dead end.\nMoonlight is faint. The walls rise close on both sides.\n\nYou see: fire, Steam Man, sleeping party, valley walls\nExits: none visible`},
+  {type:'narrate',text:`As the hours drag by, you sit down.\nYou know this is fatal to a sentinel's duty.\nBut the drowsiness is too strong.\n\nYou sink lower.\n\nSleep betrays you.\n\nAnother hour wears away.\n\nNumerous heads peer over the edge of the ravine.\nSilently, they roll immense boulders\nbuilding a stone wall across the valley's exit.\n\nThe trap is sealed.`},
+  {type:'parser',label:'-- WAKING --',cmds:[
+    {cmd:'> sit',resp:`You sat down on watch.\n\nYou should not have.`},
+    {cmd:'> look wall',resp:`The valley exit is sealed.\n\nImmense boulders, rolled into place while you slept.\nBeyond them, the dark shapes of Duff's men.\n\nBaldy rubs his eyes.\n\n"I declare I have been asleep!" you cry.\n\n"You're a purty feller to make a sentinel of, ain't you?"\nhe says, low and flat.\n"They've got us all in a nice box."\n\nYou comprehend the peril you have brought upon your friends.\n\n"It was I who got you into trouble," you say.\n"And it is I, that, with the blessing of Heaven,\nam going to get you out of it."`},
+  ]},
+  {type:'parser',label:'-- OVERLOAD SEQUENCE --',cmds:[
+    {cmd:'> feed wood',gauge:{water:100,fuel:35,pressure:60},resp:`You kindle the fire in the boiler.\nHeat builds. Iron begins to tick and groan.\n\n> PRESSURE: 60 lbs`},
+    {cmd:'> feed wood',gauge:{water:95,fuel:30,pressure:110},resp:`You heap in more wood.\nThe iron sheeting begins to warm.\n\n> PRESSURE: 110 lbs`},
+    {cmd:'> feed wood',gauge:{water:90,fuel:22,pressure:140},resp:`The furnace roars.\nA fierce, cherry heat radiates from the chest plate.\n\n> PRESSURE: 140 lbs — DANGER ZONE`},
+    {cmd:'> check pressure',gauge:{water:88,fuel:18,pressure:148},resp:`> PRESSURE: 148 lbs and rising.\n> MAXIMUM RATED LOAD: 150 lbs.\n> STRUCTURAL INTEGRITY: CRITICAL\n\n"Good heavens!" Ethan shouts. "It will blow up!"\n\n"Not for a few minutes," you reply.\n"Are you ready to run?"`},
+  ]},
+  {type:'choice',label:'-- FINAL CHOICE --',
+    prompt:"The boiler groans. Pressure at 148 lbs.\nThe stone wall holds. Duff's men wait beyond it.\nThe gold sits heavy in the wagon.",
+    opts:['> SURRENDER — Wait for Duff to negotiate. Lose gold. Friends perish.  [LOCKED]','> SACRIFICE THE MACHINE — Blow the Steam Man through the wall.  [CHOSEN]'],
+    locked:[0],chosen:1,gauge:{water:0,fuel:0,pressure:0},
+    resp:`"When it blows up, RUN!"\n\nYou turn the Steam Man directly toward the wall.\nYou let on a full head of steam.\n\nIt bounds forward.\nInstantly, forty miles an hour.\n\nIt strikes the boulders with a TERRIFIC CRASH\nshoots over the splintered wagon\nlands directly among the thunderstruck trappers.\n\n\n          IT EXPLODES ITS BOILER.\n\n\nThe shock is terrible.\nLike the bursting of an immense bomb-shell.\nThousands of fragments scatter in every direction.\n\nDuff's gang obliterated.\n\n"Now fur the wood yonder!" yells Baldy.\n\nYou all dash up the bank.\nYou secure the enemies' horses.\nYou gallop toward the Missouri.\n\nIron, fire, and force,\nthe body you built to transcend your own,\ndestroyed itself to carry you through.\n\nYou escaped.\n\nBut the Steam Man did not.`},
+  {type:'narrate',text:`                    .  .  .\n\nYou ride to Independence.\nThen to St. Louis.\n\nMickey returns to Ireland.\nEthan settles in Connecticut.\nBaldy clings to his wandering habits on the prairies.\n\nThe gold is gone.\nThe machine is destroyed.\nBut you are alive.\n\nBack home, you resume your education,\ndreaming of the day you will construct another Steam Man.\nOne capable of even more wonderful performances.\n\n\n\n           ━━━━━━━━━━━━━━━━━━━━━\n                THE END.\n           ━━━━━━━━━━━━━━━━━━━━━`},
+]},
+];
+
+function setOut(t){OUT.textContent=t;MID.scrollTop=MID.scrollHeight;}
+function setStatus(s){SLBL.textContent=s||'';}
+function applyGauge(g){if(g)animateGaugeTo(g,300);}
+
+function typeStr(text,spd,cb){
+  typing=true;skipFlag=false;
+  const start=tbuf;tpos=0;
+  function tick(){
+    if(skipFlag){tbuf=start+text;setOut(tbuf);typing=false;if(cb)cb();return;}
+    if(paused){tyT=setTimeout(tick,80);return;}
+    if(tpos<text.length){
+      tbuf=start+text.slice(0,tpos+1);setOut(tbuf);tpos++;
+      const c=text[tpos-1];
+      let d=spd;
+      if(c==='\n')d=spd*4;
+      else if(c==='.'||c==='!'||c==='?')d=spd*7;
+      else if(c===',')d=spd*3;
+      tyT=setTimeout(tick,d);
+    }else{typing=false;if(cb)cb();}
+  }
+  tick();
+}
+
+function nextSeq(){seqi++;cmdi=0;stT=setTimeout(runSeq,autoMode?1000:0);}
+
+function showChoices(seq,stage){
+  const block=document.createElement('div');
+  block.className='choice-block';
+  if(seq.label){const lbl=document.createElement('div');lbl.className='choice-lbl';lbl.textContent=seq.label;block.appendChild(lbl);}
+  const btns=[];
+  seq.opts.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='opt'+(seq.locked&&seq.locked.includes(i)?' locked':'');
+    b.textContent=o;b.style.opacity='0';b.style.transition='opacity 0.35s';
+    b.onclick=function(){
+      if(seq.locked&&seq.locked.includes(i))return;
+      btns.forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      if(seq.gauge)animateGaugeTo(seq.gauge,200);
+      stT=setTimeout(()=>{
+        block.remove();
+        typeStr('\n\n'+seq.resp,15,()=>{stT=setTimeout(nextSeq,autoMode?2000:500);});
+      },650);
+    };
+    block.appendChild(b);btns.push(b);
+    setTimeout(()=>{b.style.opacity='1';},i*350+150);
+  });
+  MID.appendChild(block);MID.scrollTop=MID.scrollHeight;
+  if(autoMode){stT=setTimeout(()=>{if(btns[seq.chosen])btns[seq.chosen].click();},seq.opts.length*350+1000);}
+}
+
+function clearMid(){OUT.textContent='';Array.from(MID.children).forEach(c=>{if(c!==OUT)c.remove();});}
+
+function runSeq(){
+  if(si>=STAGES.length)return;
+  const stage=STAGES[si];
+  if(seqi>=stage.seqs.length){
+    stT=setTimeout(()=>{si++;seqi=0;cmdi=0;tbuf='';clearMid();setStatus('');setGaugeTarget(null);runSeq();},1600);
+    return;
+  }
+  TRIGHT.textContent=stage.label;
+  setGaugeTarget(stage.gauge||null);
+  const seq=stage.seqs[seqi];
+
+  if(seq.type==='parser')setStatus(seq.label||stage.status);
+  else if(seq.type==='room')setStatus(stage.status);
+  else if(seq.type==='choice'&&seq.label)setStatus(seq.label);
+  else setStatus(stage.status);
+
+  if(seq.type==='room'||seq.type==='narrate'){
+    if(seqi===0&&stage.gauge)setGaugeTarget(stage.gauge);
+    typeStr((tbuf?'\n\n':'')+seq.text,15,()=>{stT=setTimeout(nextSeq,autoMode?2200:600);});
+  }
+  else if(seq.type==='parser'){
+    if(cmdi>=seq.cmds.length){nextSeq();return;}
+    const item=seq.cmds[cmdi];
+    if(cmdi===0&&!item.gauge&&seq.gauge)setGaugeTarget(seq.gauge);
+    stT=setTimeout(()=>{
+      typeStr('\n\n'+item.cmd,28,()=>{
+        if(item.gauge)animateGaugeTo(item.gauge,200);
+        stT=setTimeout(()=>{
+          typeStr('\n'+item.resp,14,()=>{cmdi++;stT=setTimeout(runSeq,autoMode?700:300);});
+        },320);
+      });
+    },380);
+  }
+  else if(seq.type==='choice'){
+    if(seq.prompt){typeStr('\n\n'+seq.prompt,17,()=>{stT=setTimeout(()=>showChoices(seq,stage),350);});}
+    else{stT=setTimeout(()=>showChoices(seq,stage),500);}
+  }
+}
+
+OUT.addEventListener('click',()=>{if(typing)skipFlag=true;});
+document.getElementById('bPause').onclick=function(){paused=!paused;this.textContent=paused?'[ RESUME ]':'[ PAUSE ]';};
+document.getElementById('bAuto').onclick=function(){autoMode=!autoMode;this.textContent=autoMode?'[ AUTO: ON ]':'[ AUTO: OFF ]';};
+document.getElementById('bSkip').onclick=function(){
+  clearTimeout(tyT);clearTimeout(stT);clearTimeout(gaugeT);skipFlag=true;paused=false;
+  document.getElementById('bPause').textContent='[ PAUSE ]';
+  si++;if(si>=STAGES.length)return;
+  seqi=0;cmdi=0;tbuf='';clearMid();setStatus('');
+  if(STAGES[si])setGaugeTarget(STAGES[si].gauge);
+  stT=setTimeout(runSeq,300);
+};
+document.getElementById('bRestart').onclick=function(){
+  clearTimeout(tyT);clearTimeout(stT);clearTimeout(gaugeT);skipFlag=true;paused=false;
+  si=0;seqi=0;cmdi=0;tbuf='';
+  document.getElementById('bPause').textContent='[ PAUSE ]';
+  clearMid();setStatus('');setGaugeTarget(null);
+  // Show title again
+  titleDone=false;countdown=5;
+  const ts=document.getElementById('title-screen');
+  const gs=document.getElementById('game-screen');
+  gs.classList.remove('visible');
+  setTimeout(()=>{gs.style.display='none';},800);
+  ts.classList.remove('fade-out');
+  ts.style.display='flex';ts.style.opacity='1';
+  timerEl.textContent=countdown+'s';
+  clearInterval(countdownInterval);
+  const ci=setInterval(()=>{
+    countdown--;
+    if(countdown<=0){launchGame();clearInterval(ci);return;}
+    timerEl.textContent=countdown+'s';
+  },1000);
+  document.addEventListener('keydown',launchGame,{once:true});
+  document.getElementById('title-screen').addEventListener('click',launchGame,{once:true});
+};
+</script>
+</div>
+</body>
+</html>
